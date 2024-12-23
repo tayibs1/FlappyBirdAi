@@ -175,41 +175,50 @@ def main():
 
     run = True
     while run:
-        clock.tick(30)
+        clock.tick(30)  # Limit to 30 frames per second
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                bird.jump()
+                bird.jump()  # Bird jumps when SPACE is pressed
 
+        # Move bird
         bird.move()
 
+        # Handle pipes
         add_pipe = False
-        rem = []
+        rem = []  # List to hold pipes that need to be removed
         for pipe in pipes:
             pipe.move()
+            # Check for collision
             if pipe.collide(bird):
                 print("Collision detected!")
                 run = False
 
+            # Check if pipe has gone off-screen
             if pipe.x + pipe.PIPE_TOP.get_width() < 0:
                 rem.append(pipe)
 
+            # Check if bird has passed the pipe for scoring
             if not pipe.passed and pipe.x < bird.x:
                 pipe.passed = True
                 add_pipe = True
 
+        # Add new pipe if bird passed one
         if add_pipe:
             score += 1
-            pipes.append(Pipe(600))
+            pipes.append(Pipe(600))  # Add a new pipe at the end of the screen
 
+        # Remove off-screen pipes
         for r in rem:
             pipes.remove(r)
 
+        # Check if bird hits the ground
         if bird.y + bird.img.get_height() >= 730:
             print("Bird hit the ground!")
             run = False
 
+        # Move the base and draw all elements
         base.move()
         draw_window(win, bird, pipes, base, score)
 
