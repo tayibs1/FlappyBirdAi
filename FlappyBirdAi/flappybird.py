@@ -129,16 +129,41 @@ class Pipe:
 
         return False
 
-def draw_window(win, bird, pipes):
+class Base:
+    VEL = 5
+    WIDTH = BASE_IMG.get_width()
+    IMG = BASE_IMG
+
+    def __init__(self, y):
+        self.y = y
+        self.x1 = 0
+        self.x2 = self.WIDTH
+
+    def move(self):
+        self.x1 -= self.VEL
+        self.x2 -= self.VEL
+
+        if self.x1 + self.WIDTH < 0:
+            self.x1 = self.x2 + self.WIDTH
+        if self.x2 + self.WIDTH < 0:
+            self.x2 = self.x1 + self.WIDTH
+
+    def draw(self, win):
+        win.blit(self.IMG, (self.x1, self.y))
+        win.blit(self.IMG, (self.x2, self.y))
+
+def draw_window(win, bird, pipes, base):
     win.blit(BG_IMG, (0, 0))
     for pipe in pipes:
         pipe.draw(win)
+    base.draw(win)
     bird.draw(win)
     pygame.display.update()
 
 def main():
     bird = Bird(200, 200)
     pipes = [Pipe(600)]
+    base = Base(730)
     win = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     clock = pygame.time.Clock()
 
@@ -149,12 +174,13 @@ def main():
             if event.type == pygame.QUIT:
                 run = False
 
+        base.move()
         for pipe in pipes:
             pipe.move()
             if pipe.collide(bird):
                 print("Collision detected!")
 
-        draw_window(win, bird, pipes)
+        draw_window(win, bird, pipes, base)
 
     pygame.quit()
     quit()
