@@ -179,6 +179,10 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                bird.jump()
+
+        bird.move()
 
         add_pipe = False
         rem = []
@@ -201,6 +205,10 @@ def main():
 
         for r in rem:
             pipes.remove(r)
+
+        if bird.y + bird.img.get_height() >= 730:
+            print("Bird hit the ground!")
+            run = False
 
         base.move()
         draw_window(win, bird, pipes, base, score)
