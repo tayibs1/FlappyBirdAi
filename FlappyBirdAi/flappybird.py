@@ -38,14 +38,14 @@ class Bird:
         self.img = self.IMGS[0]
 
     def jump(self):
-        self.vel = -10.5  # negative velocity meaning going upwards, positive velocity means going downwards
+        self.vel = -10.5
         self.tick_count = 0
         self.height = self.y
 
     def move(self):
         self.tick_count += 1
 
-        d = self.vel * self.tick_count + 1.5 * self.tick_count ** 2  # calculating displacement
+        d = self.vel * self.tick_count + 1.5 * self.tick_count ** 2
 
         if d >= 16:
             d = 16
@@ -113,6 +113,22 @@ class Pipe:
         win.blit(self.PIPE_TOP, (self.x, self.top))
         win.blit(self.PIPE_BOTTOM, (self.x, self.bottom))
 
+    def collide(self, bird):
+        bird_mask = bird.get_mask()
+        top_mask = pygame.mask.from_surface(self.PIPE_TOP)
+        bottom_mask = pygame.mask.from_surface(self.PIPE_BOTTOM)
+
+        top_offset = (self.x - bird.x, self.top - round(bird.y))
+        bottom_offset = (self.x - bird.x, self.bottom - round(bird.y))
+
+        b_point = bird_mask.overlap(bottom_mask, bottom_offset)
+        t_point = bird_mask.overlap(top_mask, top_offset)
+
+        if b_point or t_point:
+            return True
+
+        return False
+
 def draw_window(win, bird, pipes):
     win.blit(BG_IMG, (0, 0))
     for pipe in pipes:
@@ -135,6 +151,8 @@ def main():
 
         for pipe in pipes:
             pipe.move()
+            if pipe.collide(bird):
+                print("Collision detected!")
 
         draw_window(win, bird, pipes)
 
