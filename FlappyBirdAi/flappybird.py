@@ -1,3 +1,4 @@
+
 import pygame
 import neat
 import os
@@ -7,7 +8,7 @@ pygame.font.init()
 # Constants
 WIN_WIDTH = 500
 WIN_HEIGHT = 800
- 
+
 # Load images
 script_dir = os.path.dirname(__file__)
 img_dir = os.path.join(script_dir, "imgs")
@@ -21,7 +22,7 @@ PIPE_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join(img_dir, "pip
 BASE_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join(img_dir, "base.png")))
 BG_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join(img_dir, "bg.png")))
 
-STAT_FONT = pygame.font.SysFont("comicsans", 50)
+STAT_FONT = pygame.font.SysFont("comicsans" , 50)
 
 class Bird:
     IMGS = BIRD_IMGS
@@ -40,33 +41,36 @@ class Bird:
         self.img = self.IMGS[0]
 
     def jump(self):
-        self.vel = -10.5
-        self.tick_count = 0
+        self.vel = -10.5 # negative velocity meaning going upwards, positive velocity means going downwards
+        self.tick_count = 0 
         self.height = self.y
 
+    # self.tick_count is the frames of the bird moving; every time there is a frame (e.g., 30 frames per second), 
+    # every second there are 30 ticks, each tick calculating the displacement of the bird
     def move(self):
-        self.tick_count += 1
-
-        d = self.vel * self.tick_count + 1.5 * self.tick_count ** 2
-
+        self.tick_count += 1 
+        
+        d = self.vel * self.tick_count + 1.5 * self.tick_count ** 2 # calculating displacement; tells us based on velocity how much we are moving up or down
+        
         if d >= 16:
             d = 16
-
+        
         if d < 0:
             d -= 2
-
+        
         self.y = self.y + d
-
-        if (d < 0) or (self.y < self.height + 50):
+        
+        if (d < 0) or (self.y < self.height + 50): # when going up, it checks if height is still above the initial height at position 0; if under that position, start to tilt bird
             if self.tilt < self.MAX_ROTATION:
-                self.tilt = self.MAX_ROTATION
+                self.tilt = self.MAX_ROTATION # sets it back to 25 degrees if it goes above, to stop it flipping itself
         else:
             if self.tilt > -90:
-                self.tilt -= self.ROT_VEL
+                self.tilt -= self.ROT_VEL # when going downwards, it tilts 90 degrees to simulate the bird diving
 
     def draw(self, win):
-        self.img_count += 1
-
+        self.img_count += 1 # keeps track of how many images have been shown
+        
+        # logic to get flappy bird wings to flap up and down
         if self.img_count < self.ANIMATION_TIME:
             self.img = self.IMGS[0]
         elif self.img_count < self.ANIMATION_TIME * 2:
@@ -78,97 +82,111 @@ class Bird:
         elif self.img_count == self.ANIMATION_TIME * 4 + 1:
             self.img = self.IMGS[0]
             self.img_count = 0
-
+        
         if self.tilt <= -80:
             self.img = self.IMGS[1]
-            self.img_count = self.ANIMATION_TIME * 2
-
+            self.img_count = self.ANIMATION_TIME * 2 # doesn't skip image when flapping back up
+            
         rotated_image = pygame.transform.rotate(self.img, self.tilt)
-        new_rect = rotated_image.get_rect(center=self.img.get_rect(topleft=(self.x, self.y)).center)
-        win.blit(rotated_image, new_rect.topleft)
-
+        # rotates image around the center where bird is located, not from the top-left of the window
+        new_rect = rotated_image.get_rect(center=self.img.get_rect(topleft=(self.x, self.y)).center) 
+        win.blit(rotated_image, new_rect.topleft) # rotates img
+        
     def get_mask(self):
         return pygame.mask.from_surface(self.img)
-
+    
 class Pipe:
     GAP = 200
     VEL = 5
-
+    
     def __init__(self, x):
         self.x = x
         self.height = 0
+        
         self.top = 0
         self.bottom = 0
         self.PIPE_TOP = pygame.transform.flip(PIPE_IMG, False, True)
         self.PIPE_BOTTOM = PIPE_IMG
+        
         self.passed = False
         self.set_height()
-
+        
     def set_height(self):
-        self.height = random.randrange(50, 450)
+        self.height = random.randrange(50,450)
         self.top = self.height - self.PIPE_TOP.get_height()
         self.bottom = self.height + self.GAP
-
+        
     def move(self):
         self.x -= self.VEL
-
-    def draw(self, win):
-        win.blit(self.PIPE_TOP, (self.x, self.top))
+        
+    def draw(self,win):
+        win.blit(self.PIPE_TOP, (self.x,self.top))
         win.blit(self.PIPE_BOTTOM, (self.x, self.bottom))
-
-    def collide(self, bird):
+    
+    #using masks for collisions (using 2d arrays to store x and y pixel coords of an image 
+    #and then the arrays are compared with other objects to see if collisions occur 
+    def collide (self, bird):
         bird_mask = bird.get_mask()
         top_mask = pygame.mask.from_surface(self.PIPE_TOP)
         bottom_mask = pygame.mask.from_surface(self.PIPE_BOTTOM)
-
+        
         top_offset = (self.x - bird.x, self.top - round(bird.y))
         bottom_offset = (self.x - bird.x, self.bottom - round(bird.y))
-
-        b_point = bird_mask.overlap(bottom_mask, bottom_offset)
-        t_point = bird_mask.overlap(top_mask, top_offset)
-
-        if b_point or t_point:
+        
+        #finds the point of collcision wheres masks overlap
+        b_point =  bird_mask.overlap(bottom_mask, bottom_offset ) 
+        t_point =  bird_mask.overlap(top_mask, top_offset )
+        
+        if t_point or b_point:
             return True
-
+        
         return False
-
+    
 class Base:
-    VEL = 5
+    VEl = 5
     WIDTH = BASE_IMG.get_width()
     IMG = BASE_IMG
-
-    def __init__(self, y):
-        self.y = y
+    
+    def __init__(self,y):
+        self.y  = y
         self.x1 = 0
         self.x2 = self.WIDTH
-
+        
+    # since base image is too small we need to create two base images move to the left at the same velocity
+    #this simulates two base images moving constantly when in reality its two of the same base images in a cycle moving at same speed as the screen
     def move(self):
-        self.x1 -= self.VEL
-        self.x2 -= self.VEL
-
+        self.x1 -= self.VEl
+        self.x2 -= self.VEl
+        
         if self.x1 + self.WIDTH < 0:
             self.x1 = self.x2 + self.WIDTH
+            
         if self.x2 + self.WIDTH < 0:
-            self.x2 = self.x1 + self.WIDTH
-
+            self.x2 = self.x1 +self.WIDTH
+            
     def draw(self, win):
         win.blit(self.IMG, (self.x1, self.y))
         win.blit(self.IMG, (self.x2, self.y))
-
-def draw_window(win, bird, pipes, base, score):
+        
+def draw_window(win, bird, pipes , base, score):
+    # .blit function means .draw, and draws the background img from the top-left
     win.blit(BG_IMG, (0, 0))
+    
     for pipe in pipes:
         pipe.draw(win)
-    base.draw(win)
-    text = STAT_FONT.render("Score: " + str(score), 1, (255, 255, 255))
-    win.blit(text, (WIN_WIDTH - 10 - text.get_width(), 10))
+        
+    text = STAT_FONT.render("Score: "+ str(score), 1, (255,255,255))
+    win.blit(text, (WIN_WIDTH -10 - text.get_width(), 10))
+        
+    base.draw(win) 
+           
     bird.draw(win)
     pygame.display.update()
 
 def main():
-    bird = Bird(200, 200)
-    pipes = [Pipe(600)]
+    bird = Bird(230, 350)
     base = Base(730)
+    pipes = [Pipe(600)]
     win = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     clock = pygame.time.Clock()
     score = 0
@@ -179,46 +197,33 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                bird.jump()  # Bird jumps when SPACE is pressed
 
-        # Move bird
-        bird.move()
-
-        # Handle pipes
+        #bird.move()
         add_pipe = False
-        rem = []  # List to hold pipes that need to be removed
+        rem = []
         for pipe in pipes:
-            pipe.move()
-            # Check for collision
             if pipe.collide(bird):
-                print("Collision detected!")
-                run = False
-
-            # Check if pipe has gone off-screen
-            if pipe.x + pipe.PIPE_TOP.get_width() < 0:
+                pass
+            
+            if pipe.x + pipe.PIPE_TOP.get_width()< 0:
                 rem.append(pipe)
-
-            # Check if bird has passed the pipe for scoring
+                
             if not pipe.passed and pipe.x < bird.x:
                 pipe.passed = True
                 add_pipe = True
-
-        # Add new pipe if bird passed one
+                
+            pipe.move()
+        
         if add_pipe:
             score += 1
-            pipes.append(Pipe(600))  # Add a new pipe at the end of the screen
-
-        # Remove off-screen pipes
+            pipes.append(Pipe(600))
+            
         for r in rem:
             pipes.remove(r)
-
-        # Check if bird hits the ground
+            
         if bird.y + bird.img.get_height() >= 730:
-            print("Bird hit the ground!")
-            run = False
-
-        # Move the base and draw all elements
+            pass
+            
         base.move()
         draw_window(win, bird, pipes, base, score)
 
