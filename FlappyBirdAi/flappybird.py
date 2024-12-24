@@ -7,7 +7,7 @@ pygame.font.init()
 # Constants
 WIN_WIDTH = 500
 WIN_HEIGHT = 800
-
+ 
 # Load images
 script_dir = os.path.dirname(__file__)
 img_dir = os.path.join(script_dir, "imgs")
