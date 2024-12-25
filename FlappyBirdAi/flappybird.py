@@ -168,7 +168,7 @@ class Base:
         win.blit(self.IMG, (self.x1, self.y))
         win.blit(self.IMG, (self.x2, self.y))
         
-def draw_window(win, bird, pipes , base, score):
+def draw_window(win, birds, pipes , base, score):
     # .blit function means .draw, and draws the background img from the top-left
     win.blit(BG_IMG, (0, 0))
     
@@ -178,9 +178,11 @@ def draw_window(win, bird, pipes , base, score):
     text = STAT_FONT.render("Score: "+ str(score), 1, (255,255,255))
     win.blit(text, (WIN_WIDTH -10 - text.get_width(), 10))
         
-    base.draw(win) 
-           
-    bird.draw(win)
+    base.draw(win)
+     
+    for bird in birds:     
+        bird.draw(win)
+        
     pygame.display.update()
 
 def main(genomes,config):
@@ -188,7 +190,7 @@ def main(genomes,config):
     ge = []
     birds = []
     
-    for g in genomes:
+    for  __, g in genomes:
          net = neat.nn.FeedForwardNetwork.create(g, config) #setting up neural network (giving it the genome, config file)
          nets.append(net)
          birds.append(Bird(230,350))
@@ -207,12 +209,21 @@ def main(genomes,config):
         for event in pygame.event.get():
             if event.type == pygame.QUIT: 
                 run = False
+                pygame.quit()
+                quit()
     
         pipe_ind = 0
         if len(birds) > 0:
             if len(pipes) > 1 and birds[0].x > pipes[0].x + pipes[0].PIPE_TOP.get_width():
                 pipe_ind = 1
-
+                
+        else:
+            run = False
+            break
+                
+        for x, bird in enumerate(birds):
+            bird.move()
+            
         #bird.move()
         add_pipe = False
         rem = []
@@ -242,16 +253,13 @@ def main(genomes,config):
             pipes.remove(r)
         
         for x, bird in enumerate(birds):
-            if bird.y + bird.img.get_height() >= 730:
+            if bird.y + bird.img.get_height() >= 730 or bird.y < 0:
                     birds.pop(x)
                     nets.pop(x)
                     ge.pop(x)
             
         base.move()
-        draw_window(win, bird, pipes, base, score)
-
-    pygame.quit()
-    quit()
+        draw_window(win, birds, pipes, base, score)
     
 def run(config_path):
 #runs the NEAT algorithm to train a neural network to play flappy bird.
