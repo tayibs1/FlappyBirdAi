@@ -205,10 +205,13 @@ def main(genomes,config):
     while run:
         clock.tick(30)  # Limit to 30 frames per second
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT: 
                 run = False
     
-        
+        pipe_ind = 0
+        if len(birds) > 0:
+            if len(pipes) > 1 and birds[0].x > pipes[0].x + pipes[0].PIPE_TOP.get_width():
+                pipe_ind = 1
 
         #bird.move()
         add_pipe = False
