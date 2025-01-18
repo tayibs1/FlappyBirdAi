@@ -2,6 +2,7 @@ import pygame
 import neat
 import os
 import random
+import csv
 
 pygame.font.init()
 
@@ -176,36 +177,40 @@ def draw_window(win, birds, pipes, base, score, gen):
 
     pygame.display.update()
 
+#Data Collection
+gameplay_data = []
+
 def main(genomes, config):
-    global GEN
+    global GEN, gameplay_data
     GEN += 1
     nets = []
     ge = []
     birds = []
 
+    # Initialize NEAT networks and birds
     for __, g in genomes:
-        net = neat.nn.FeedForwardNetwork.create(g, config)  # setting up neural network (giving it the genome, config file)
+        net = neat.nn.FeedForwardNetwork.create(g, config)
         nets.append(net)
-        birds.append(Bird(230, 350))
+        birds.append(Bird(230, 350))  # Bird starting position
         g.fitness = 0
         ge.append(g)
 
+    # Initialize game elements
     base = Base(730)
     pipes = [Pipe(600)]
     win = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     clock = pygame.time.Clock()
-    score = 0
 
     run = True
     while run:
-        clock.tick(FPS)  # Limit to FPS
+        clock.tick(FPS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.quit()
                 quit()
 
-        if len(birds) == 0:  # Ensure there are birds before proceeding
+        if len(birds) == 0:  # Stop if all birds are dead
             run = False
             break
 
@@ -213,22 +218,32 @@ def main(genomes, config):
         if len(pipes) > 1 and birds[0].x > pipes[0].x + pipes[0].PIPE_TOP.get_width():
             pipe_ind = 1
 
+        # Update each bird and collect data
         for x, bird in enumerate(birds):
             bird.move()
-            ge[x].fitness += 0.1  # for every second the bird is alive it gains 1 fitness; encourages it to stay alive longer rather than just going all the way up or down
+            ge[x].fitness += 0.1  # Reward for staying alive
 
-            # send bird location, top pipe location and bottom pipe location and determine from network whether to jump or not
-            output = nets[x].activate((bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom)))
+            # Get NEAT's decision
+            output = nets[x].activate(
+                (bird.y, abs(bird.y - pipes[pipe_ind].height), abs(bird.y - pipes[pipe_ind].bottom))
+            )
+            neat_action = 1 if output[0] > 0.5 else 0  # 1 = jump, 0 = no action
 
-            if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
+            # Collect state and action data
+            current_state = [bird.y, bird.velocity, pipes[pipe_ind].x, pipes[pipe_ind].height]
+            gameplay_data.append(current_state + [neat_action])  # Append to data list
+
+            # Apply NEAT's action
+            if neat_action == 1:
                 bird.jump()
 
+        # Handle pipes
         add_pipe = False
         rem = []
         for pipe in pipes:
             for x, bird in enumerate(birds):
                 if pipe.collide(bird):
-                    ge[x].fitness -= 1  # favors the bird that didn't hit the pipe and passed compared to the bird that collided so that the algorithm can learn faster
+                    ge[x].fitness -= 1  # Penalize for collision
                     birds.pop(x)
                     nets.pop(x)
                     ge.pop(x)
@@ -243,22 +258,26 @@ def main(genomes, config):
             pipe.move()
 
         if add_pipe:
-            score += 1
-            for g in ge:
-                g.fitness += 5  # this allows the birds that pass through the pipe to have more fitness favouring birds that pass the pipes
             pipes.append(Pipe(600))
 
         for r in rem:
             pipes.remove(r)
 
         for x, bird in enumerate(birds):
-            if bird.y + bird.img.get_height() >= 730 or bird.y < 0:
+            if bird.y + bird.img.get_height() >= 730 or bird.y < 0:  # Bird hits the ground or goes too high
                 birds.pop(x)
                 nets.pop(x)
                 ge.pop(x)
 
         base.move()
-        draw_window(win, birds, pipes, base, score, GEN)
+        draw_window(win, birds, pipes, base, score=0, gen=GEN)
+
+    # Save gameplay data after the game finishes
+    with open('gameplay_data.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["bird_y", "bird_velocity", "pipe_x", "pipe_height", "action"])
+        writer.writerows(gameplay_data)
+
 
 def run(config_path):
     # runs the NEAT algorithm to train a neural network to play flappy bird.
@@ -280,4 +299,4 @@ def run(config_path):
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, "config-feedforward.txt")
-    run(config_path)
+    run(config_path)    
